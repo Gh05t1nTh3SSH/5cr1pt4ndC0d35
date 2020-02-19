@@ -1,0 +1,99 @@
+#!/usr/bin/python
+
+import argparse
+from twx.botapi import TelegramBot
+import os
+import time
+from telegram.ext import Updater, CommandHandler
+
+# Proxy
+proxy = ""
+
+os.environ["http_proxy"] = proxy
+os.environ["https_proxy"] = proxy
+
+os.environ["HTTP_PROXY"] = proxy
+os.environ["HTTPS_PROXY"] = proxy
+
+# TokkenBot, user_ID
+updater = Updater(token='')
+dispatcher = updater.dispatcher
+
+# Arguments que li arriben
+def parse_args():
+    parser = argparse.ArgumentParser(description='Nagios notification via Telegram')
+    parser.add_argument('-t', '--token', nargs='?', required=True)
+    parser.add_argument('-o', '--object_type', nargs='?', required=True)
+    parser.add_argument('--contact', nargs='?', required=True)
+    parser.add_argument('--notificationtype', nargs='?')
+    parser.add_argument('--hoststate', nargs='?')
+    parser.add_argument('--hostname', nargs='?')
+    parser.add_argument('--hostaddress', nargs='?')
+    parser.add_argument('--servicestate', nargs='?')
+    parser.add_argument('--servicedesc', nargs='?')
+    parser.add_argument('--output', nargs='?')
+    args = parser.parse_args()
+    return args
+
+def send_notification(token, user_id, message):
+    bot = TelegramBot(token)
+    bot.send_message(user_id, message).wait()
+    print("Send it!")
+    
+# Estat servei
+def service_notification(args):
+    state = ''
+    if args.servicestate == 'CRITICAL':
+        state = u'\U0001F525 '
+
+    return "%s%s/%s: %s" % (
+        state,
+        args.hostname,
+        args.servicedesc,
+        args.output,
+    )
+
+# Check actual status
+def check():
+    args = parse_args()
+    file = 'status.dat'
+    file=open(file, 'r')
+    services = []
+    status = []
+    i=0
+    for line in file:
+        if "servicestatus" in line:
+          i=1
+
+        elif "hoststatus" in line:
+          i=0
+
+        elif "host_name" in line and i==1: #Cambiar por args.hostname.startswith("p")
+          hostname_ci=str(line[0:len(line)-1].split('=')[1])
+
+        elif "service_description" in line and i==1: #Cambiar por args.servicedesc
+          service_desc=str(line[0:len(line)-1].split('=')[1])
+
+        elif "current_state" in line and i==1: #Cambiar por "current_state=2"
+          state=line[0:len(line)-1].split('=')[1]
+          service=hostname_ci+'-'+service_desc
+          services.append(service)
+          status.append(state)
+          
+    r=status[services.index(args.hostname+'-'+args.servicedesc)]#args.object_type+'-'+args.hostname+'-'+args.servicedesc)]
+    print(r)
+    return r
+
+def main():
+    args = parse_args()
+    user_id = int(args.contact)
+    if args.object_type == 'service' and args.servicestate == 'CRITICAL' and args.hostname.startswith("p") or args.hostname.startswith("P"):
+        time.sleep(10)
+        r = check()
+        if r==str(2):
+            message = service_notification(args)
+            send_notification(args.token, user_id, message)
+            target = args.hostname
+
+if __name__ == '__main__':
+    main()
