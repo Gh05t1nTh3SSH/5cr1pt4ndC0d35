@@ -1,0 +1,60 @@
+#!/usr/bin/python3
+import argparse
+import os
+from telegram.ext import Updater, CommandHandler
+
+# Proxy Settings
+#proxy = ""
+
+#os.environ["http_proxy"] = proxy
+#os.environ["https_proxy"] = proxy
+
+#os.environ["HTTP_PROXY"] = proxy
+#os.environ["HTTPS_PROXY"] = proxy
+
+# TokenBot, user_ID
+updater = Updater(token='')
+users = {}
+dispatcher = updater.dispatcher
+
+
+# Part Interactiva
+def info(bot, update):
+    user_id = update.message.from_user['id']
+    missatge = user_id
+    bot.send_message(chat_id=update.message.chat_id, text=missatge)
+
+def reboot(bot, update, args):
+    hostname = args[0]
+    user_id = update.message.from_user['id']
+    if user_id in users:
+        missatge1 = 'Rebooting... wait'
+        bot.send_message(chat_id=update.message.chat_id, text=missatge1)
+
+#        ssh = paramiko.SSHClient()
+#        print("1")
+#        ssh.connect(, username="", password="")
+#        print("2")
+#        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(uname -a)
+#        print("3")
+#        ssh=os.system("ssh "+hostname+" -l nagios uname -a")
+#        bot.send_message(chat_id=update.message.chat_id, text=test)
+#        print(ssh)
+#        if ssh == 0:
+#            missatge = 'OK'#+args[0]+'!'
+#            bot.send_message(chat_id=update.message.chat_id, text=missatge)
+
+def help(bot, update, args):
+    user_id = update.message.from_user['id']
+    if user_id in users:
+        missatge = "Aquesta es la llista de comandes:\n\n/info - Aconsegueix el teu user_ID\n/reboot $hostname - Reinicia la maquina, serveix IP o HOSTNAME"
+        bot.send_message(chat_id=update.message.chat_id, text=missatge)
+
+handlers = [CommandHandler('info', info),
+            CommandHandler('reboot', reboot, pass_args=True),
+            CommandHandler('help', help, pass_args=True)]
+
+for handler in handlers:
+    dispatcher.add_handler(handler)
+
+updater.start_polling()
